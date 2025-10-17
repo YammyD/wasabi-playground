@@ -65,8 +65,7 @@ struct EfiGraphicsOutputProtocolMode<'a> {
     pub max_mode: u32,
     pub mode: u32,
     pub info: &'a EfiGraphicsOutputProtocolPixelInfo,
-    pub size_of_info: u32,
-    _padding: [u32; 5],
+    pub size_of_info: u64,
     pub frame_buffer_base: usize,
     pub frame_buffer_size: usize,
 }
