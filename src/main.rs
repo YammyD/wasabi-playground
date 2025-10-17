@@ -1,6 +1,6 @@
 #![no_main]
 #![no_std]
-#![feature(offset_of)]
+//#![feature(offset_of)]
 
 use core::mem::offset_of;
 use core::mem::size_of;
@@ -9,7 +9,7 @@ use core::ptr::null_mut;
 use core::slice;
 
 type EfiVoid = u8;
-type EfiStatus = u64;
+type EfiHandle = u64;
 type Result<T> = core::result::Result<T, &'static str>;
 
 #[repr(C)]
@@ -32,12 +32,12 @@ const EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID: EfiGuid = EfiGuid {
 #[must_use]
 #[repr(u64)]
 enum EfiStatus {
-    Success = 0
+    Success = 0,
 }
 
 #[repr(C)]
 struct EfiBootServicesTable {
-    _reserved0: [u64; 40]
+    _reserved0: [u64; 40],
     locate_protocol: extern "win64" fn(protocol: *const EfiGuid, registration: *const EfiVoid, interface: *mut *mut EfiVoid) -> EfiStatus,
 }
 const _: () = assert!(offset_of!(EfiBootServicesTable, locate_protocol) == 320);
@@ -50,7 +50,7 @@ struct EfiSystemTable {
 
 #[repr(C)]
 #[derive(Debug)]
-struct EfiGraphicsOutputProtocolPixelInfo<'A> {
+struct EfiGraphicsOutputProtocolPixelInfo {
     version: u32,
     pub horizontal_resolution: u32,
     pub vertical_resolution: u32,
@@ -61,7 +61,7 @@ const _: () = assert!(size_of::<EfiGraphicsOutputProtocolPixelInfo>() == 36);
 
 #[repr(C)]
 #[derive(Debug)]
-struct EfiGraphicsOutputProtocolMode<'A> {
+struct EfiGraphicsOutputProtocolMode<'a> {
     pub max_mode: u32,
     pub mode: u32,
     pub info: &'a EfiGraphicsOutputProtocolPixelInfo,
@@ -73,9 +73,9 @@ struct EfiGraphicsOutputProtocolMode<'A> {
 
 #[repr(C)]
 #[derive(Debug)]
-struct EfiGraphicsOutputProtocol<'A> {
+struct EfiGraphicsOutputProtocol<'a> {
     reserved: [u64; 3],
-    pub mode: &'a EfiGraphicsOutputProtocolMode<'A>,
+    pub mode: &'a EfiGraphicsOutputProtocolMode<'a>,
 }
 fn locate_graphics_protocol<'a>(efi_system_table: &EfiSystemTable) -> Result<&'a EfiGraphicsOutputProtocol<'a>> {
     let mut graphic_output_protocol = null_mut::<EfiGraphicsOutputProtocol>();
@@ -94,8 +94,8 @@ fn locate_graphics_protocol<'a>(efi_system_table: &EfiSystemTable) -> Result<&'a
 #[unsafe(no_mangle)]
 fn efi_main(_image_handle: EfiHandle, efi_system_table: &EfiSystemTable) {
     let efi_graphics_output_protocol = locate_graphics_protocol(efi_system_table).unwrap();
-    let vram_addr = efi_graphics_output_protocol.mode->frame_buffer_base;
-    let vram_byte_size = efi_graphics_output_protocol.mode->frame_buffer_size;
+    let vram_addr = efi_graphics_output_protocol.mode.frame_buffer_base;
+    let vram_byte_size = efi_graphics_output_protocol.mode.frame_buffer_size;
 
     let vram = unsafe { slice::from_raw_parts_mut(vram_addr as *mut u32, vram_byte_size / size_of::<u32>()) };
     for e in vram {
